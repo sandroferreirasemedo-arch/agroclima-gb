@@ -1,0 +1,165 @@
+{% load static %}<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgroClima Guiné-Bissau</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
+  <link rel="stylesheet" href="{% static 'dashboard/app.css' %}">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <div>
+      <h1>AgroClima <span>Guiné-Bissau</span></h1>
+      <p>Monitorização agrícola, variabilidade climática e risco de seca</p>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="mapa" role="tab">Mapa</button>
+    <button class="tab" data-tab="timelapse" role="tab">Timelapse</button>
+    <button class="tab" data-tab="regioes" role="tab">Regiões</button>
+  </nav>
+  <div class="status" id="status" aria-live="polite"></div>
+</header>
+
+<main class="layout">
+  <aside class="sidebar">
+    <!-- Período (comum a todos os separadores) -->
+    <section class="card">
+      <h2>Período</h2>
+      <div class="row">
+        <label>Início<input type="date" id="start"></label>
+        <label>Fim<input type="date" id="end"></label>
+      </div>
+      <div class="chips">
+        <button class="chip" data-preset="season">Época chuvosa</button>
+        <button class="chip" data-preset="3m">Últimos 3 meses</button>
+        <button class="chip" data-preset="12m">12 meses</button>
+        <button class="chip" data-preset="cashew">Campanha caju</button>
+      </div>
+      <label class="check"><input type="checkbox" id="mask-cropland"> Só áreas de cultivo (WorldCover)</label>
+    </section>
+
+    <!-- Separador Mapa -->
+    <div class="pane" data-pane="mapa">
+      <section class="card">
+        <h2>Indicador</h2>
+        <select id="layer">
+          {% regroup layers by group as groups %}
+          {% for g in groups %}
+          <optgroup label="{{ g.grouper }}">
+            {% for l in g.list %}<option value="{{ l.id }}"{% if l.id == "ndvi_anom" %} selected{% endif %}>{{ l.label }}</option>{% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+        <label class="slider">Opacidade <input type="range" id="opacity" min="0" max="1" step="0.05" value="0.85"></label>
+        <button class="btn primary" id="btn-layer">Actualizar mapa</button>
+      </section>
+
+      <section class="card">
+        <h2>Área de interesse</h2>
+        <p class="hint">Desenhe um polígono ou rectângulo no mapa, clique numa região, ou escolha uma área guardada.</p>
+        <select id="saved-aois"><option value="">— Áreas guardadas —</option></select>
+        <div class="row">
+          <button class="btn" id="btn-analyse" disabled>Analisar área</button>
+          <button class="btn ghost" id="btn-clear">Limpar</button>
+        </div>
+        <div class="row save-row">
+          <input type="text" id="aoi-name" placeholder="Nome (ex.: Bolanhas de Cacheu)">
+          <button class="btn ghost" id="btn-save" disabled>Guardar</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Separador Timelapse -->
+    <div class="pane hidden" data-pane="timelapse">
+      <section class="card">
+        <h2>Timelapse mensal</h2>
+        <select id="tl-var">
+          {% for k, v in timelapse_vars.items %}<option value="{{ k }}">{{ v.label }}</option>{% endfor %}
+        </select>
+        <button class="btn primary" id="btn-tl-load">Carregar fotogramas</button>
+        <p class="hint">Máximo 36 meses por animação. Os meses mais recentes do período são usados.</p>
+      </section>
+      <section class="card">
+        <h2>Leitor</h2>
+        <div class="tl-date" id="tl-date">—</div>
+        <input type="range" id="tl-slider" min="0" max="0" value="0" disabled>
+        <div class="row player">
+          <button class="btn icon" id="tl-prev" title="Anterior" disabled>⏮</button>
+          <button class="btn icon primary" id="tl-play" title="Reproduzir" disabled>▶</button>
+          <button class="btn icon" id="tl-next" title="Seguinte" disabled>⏭</button>
+        </div>
+        <label class="slider">Velocidade <input type="range" id="tl-speed" min="250" max="2000" step="250" value="1000" dir="rtl"></label>
+        <a class="btn ghost hidden" id="tl-gif" target="_blank" rel="noopener">Descarregar GIF</a>
+        <div class="tl-progress" id="tl-progress"></div>
+      </section>
+    </div>
+
+    <!-- Separador Regiões -->
+    <div class="pane hidden" data-pane="regioes">
+      <section class="card">
+        <h2>Mapa por região</h2>
+        <div class="row">
+          <label>Nível
+            <select id="reg-level"><option value="1">Regiões</option><option value="2">Sectores</option></select>
+          </label>
+          <label>Indicador
+            <select id="reg-indicator">
+              {% for k, v in indicators %}<option value="{{ k }}"{% if k == "vhi" %} selected{% endif %}>{{ v }}</option>{% endfor %}
+            </select>
+          </label>
+        </div>
+        <label>Mês <select id="reg-period"></select></label>
+        <p class="hint">Valores pré-calculados com <code>manage.py compute_stats</code>. Clique numa região para ver o histórico e analisar o período seleccionado.</p>
+      </section>
+      <section class="card">
+        <h2>Classificação</h2>
+        <ol class="ranking" id="ranking"></ol>
+      </section>
+    </div>
+
+    <footer class="credits">
+      CHIRPS v2.0 (UCSB-CHG) · MODIS MOD13Q1/MOD11A2 v061 (NASA LP DAAC) · ESA WorldCover · Google Earth Engine<br>
+      Referência: precipitação {{ rain_baseline.0 }}–{{ rain_baseline.1 }}, vegetação {{ veg_baseline.0 }}–{{ veg_baseline.1 }}
+    </footer>
+  </aside>
+
+  <section class="map-wrap">
+    <div id="map"></div>
+    <div class="legend" id="legend" hidden></div>
+    <div class="loading" id="loading" hidden><span></span>A processar no Earth Engine…</div>
+  </section>
+
+  <section class="results" id="results" hidden>
+    <header class="results-head">
+      <div>
+        <h2 id="res-title">Análise</h2>
+        <p id="res-sub"></p>
+      </div>
+      <div class="row">
+        <button class="btn ghost" id="btn-csv">Exportar CSV</button>
+        <button class="btn icon ghost" id="btn-close-results" title="Fechar">✕</button>
+      </div>
+    </header>
+    <div class="kpis" id="kpis"></div>
+    <div class="charts">
+      <figure><figcaption>Precipitação mensal vs climatologia</figcaption><div class="chart-box"><canvas id="chart-rain"></canvas></div></figure>
+      <figure><figcaption>NDVI (16 dias) vs referência</figcaption><div class="chart-box"><canvas id="chart-ndvi"></canvas></div></figure>
+      <figure><figcaption>Severidade da seca (% da área, VHI)</figcaption><div class="chart-box"><canvas id="chart-sev"></canvas></div></figure>
+    </div>
+  </section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+{{ layers|json_script:"layers-data" }}
+<script src="{% static 'dashboard/app.js' %}"></script>
+</body>
+</html>

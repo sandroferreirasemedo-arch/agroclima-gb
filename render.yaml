@@ -1,0 +1,40 @@
+# Blueprint do Render: cria o site (Docker) e a base de dados PostgreSQL/PostGIS.
+# Render → New → Blueprint → escolher este repositório.
+services:
+  - type: web
+    name: agroclima-gb
+    runtime: docker
+    plan: free            # mude para "starter" para não adormecer por inactividade
+    region: frankfurt
+    healthCheckPath: /healthz
+    envVars:
+      - key: POSTGRES_HOST
+        fromDatabase: { name: agroclima-db, property: host }
+      - key: POSTGRES_PORT
+        fromDatabase: { name: agroclima-db, property: port }
+      - key: POSTGRES_DB
+        fromDatabase: { name: agroclima-db, property: database }
+      - key: POSTGRES_USER
+        fromDatabase: { name: agroclima-db, property: user }
+      - key: POSTGRES_PASSWORD
+        fromDatabase: { name: agroclima-db, property: password }
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: GEE_PROJECT
+        sync: false        # o Render pede o valor ao criar o Blueprint
+      - key: GEE_SERVICE_ACCOUNT_KEY
+        value: /etc/secrets/gee-key.json
+      - key: AUTO_STATS_MONTHS
+        value: "6"
+      - key: WEB_CONCURRENCY
+        value: "2"
+
+databases:
+  - name: agroclima-db
+    plan: free             # expira 30 dias após a criação — use "basic-256mb" ou superior para uso real
+    region: frankfurt
+    postgresMajorVersion: "16"
+    databaseName: agroclima
+    user: agroclima
