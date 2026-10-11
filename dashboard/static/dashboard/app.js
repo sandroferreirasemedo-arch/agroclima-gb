@@ -111,7 +111,7 @@
   }
 
   function rampColor(palette, t) {
-    if (t == null || Number.isNaN(t)) return "#3a4642";
+    if (t == null || Number.isNaN(t)) return "#d5dbd8";
     t = Math.max(0, Math.min(1, t));
     const pos = t * (palette.length - 1);
     const i = Math.min(palette.length - 2, Math.floor(pos));
@@ -132,7 +132,7 @@
   const map = L.map("map", { zoomControl: true, preferCanvas: true }).setView([11.85, -15.2], 8);
 
   const basemaps = {
-    "Escuro (CARTO)": L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    "Claro (CARTO Positron)": L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       attribution: "© OpenStreetMap © CARTO", subdomains: "abcd", maxZoom: 19,
     }),
     "Satélite (Esri)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
@@ -142,7 +142,7 @@
       attribution: "© OpenStreetMap", maxZoom: 19,
     }),
   };
-  basemaps["Escuro (CARTO)"].addTo(map);
+  basemaps["Claro (CARTO Positron)"].addTo(map);
 
   map.createPane("ee").style.zIndex = 350;
   map.createPane("bounds").style.zIndex = 420;
@@ -150,7 +150,7 @@
   let eeLayer = null;
   const outlineLayer = L.geoJSON(null, {
     pane: "bounds",
-    style: { color: "#e6ede9", weight: 1, opacity: 0.7, fill: true, fillOpacity: 0 },
+    style: { color: "#33413b", weight: 1.2, opacity: 0.8, fill: true, fillOpacity: 0 },
     onEachFeature: (f, lyr) => {
       lyr.bindTooltip(esc(f.properties.name), { permanent: true, direction: "center", className: "region-label" });
       lyr.on("click", () => { if (!state.drawing) selectRegion(f, lyr); });
@@ -159,7 +159,7 @@
 
   const choroLayer = L.geoJSON(null, { pane: "bounds" });
   const drawn = new L.FeatureGroup().addTo(map);
-  const savedLayer = L.geoJSON(null, { pane: "bounds", style: { color: "#f2a33a", weight: 2, fillOpacity: 0.05 } }).addTo(map);
+  const savedLayer = L.geoJSON(null, { pane: "bounds", style: { color: "#b45f06", weight: 2, dashArray: "4 3", fillOpacity: 0.04 } }).addTo(map);
 
   L.control.layers(basemaps, { "Limites regionais": outlineLayer, "Áreas guardadas": savedLayer }, { position: "topright" }).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
@@ -169,8 +169,8 @@
     edit: { featureGroup: drawn, remove: true },
     draw: {
       // showArea: false evita o erro "type is not defined" do leaflet-draw 1.0.4 com Leaflet 1.9
-      polygon: { allowIntersection: false, showArea: false, shapeOptions: { color: "#3fbf7f" } },
-      rectangle: { showArea: false, shapeOptions: { color: "#3fbf7f" } },
+      polygon: { allowIntersection: false, showArea: false, shapeOptions: { color: "#0b6e4f", weight: 2 } },
+      rectangle: { showArea: false, shapeOptions: { color: "#0b6e4f", weight: 2 } },
       polyline: false, circle: false, marker: false, circlemarker: false,
     },
   }));
@@ -209,13 +209,13 @@
   });
 
   function resetOutlineStyle() {
-    outlineLayer.setStyle({ color: "#e6ede9", weight: 1, fillOpacity: 0 });
+    outlineLayer.setStyle({ color: "#33413b", weight: 1.2, fillOpacity: 0 });
   }
 
   function selectRegion(feature, lyr) {
     drawn.clearLayers();
     resetOutlineStyle();
-    if (lyr && lyr.setStyle) lyr.setStyle({ color: "#3fbf7f", weight: 3, fillOpacity: 0.08, fillColor: "#3fbf7f" });
+    if (lyr && lyr.setStyle) lyr.setStyle({ color: "#0b6e4f", weight: 3, fillOpacity: 0.08, fillColor: "#0b6e4f" });
     setTarget({ region_id: feature.properties.id }, feature.properties.name);
   }
 
@@ -317,9 +317,9 @@
   }
 
   function chartDefaults() {
-    Chart.defaults.color = "#8fa39a";
-    Chart.defaults.borderColor = "#26342f";
-    Chart.defaults.font.family = "'IBM Plex Sans', system-ui, sans-serif";
+    Chart.defaults.color = "#5c6b64";
+    Chart.defaults.borderColor = "#e6ebe8";
+    Chart.defaults.font.family = "Roboto, system-ui, sans-serif";
     Chart.defaults.font.size = 11;
     Chart.defaults.maintainAspectRatio = false;
     Chart.defaults.plugins.legend.labels.boxWidth = 12;
@@ -338,12 +338,12 @@
         datasets: [
           {
             type: "bar", label: "Observado (mm)", data: rain.map((r) => r.rain),
-            backgroundColor: rain.map((r) => (r.rain != null && r.climatology != null && r.rain < r.climatology * 0.8 ? "#f2a33a" : "#4a90c8")),
+            backgroundColor: rain.map((r) => (r.rain != null && r.climatology != null && r.rain < r.climatology * 0.8 ? "#d9822b" : "#2f7fb5")),
             borderRadius: 3,
           },
           {
             type: "line", label: `Climatologia ${rb[0]}–${rb[1]}`, data: rain.map((r) => r.climatology),
-            borderColor: "#e6ede9", borderDash: [4, 3], pointRadius: 0, tension: 0.3,
+            borderColor: "#1b2621", borderDash: [4, 3], borderWidth: 1.5, pointRadius: 0, tension: 0.3,
           },
         ],
       },
@@ -355,8 +355,8 @@
       data: {
         labels: ndvi.map((r) => r.date),
         datasets: [
-          { label: "NDVI", data: ndvi.map((r) => r.ndvi), borderColor: "#3fbf7f", backgroundColor: "rgba(63,191,127,.12)", fill: "+1", pointRadius: 1.5, tension: 0.25 },
-          { label: `Referência ${vb[0]}–${vb[1]}`, data: ndvi.map((r) => r.baseline), borderColor: "#e6ede9", borderDash: [4, 3], pointRadius: 0, tension: 0.25 },
+          { label: "NDVI", data: ndvi.map((r) => r.ndvi), borderColor: "#0b6e4f", backgroundColor: "rgba(11,110,79,.10)", borderWidth: 2, fill: "+1", pointRadius: 1.5, tension: 0.25 },
+          { label: `Referência ${vb[0]}–${vb[1]}`, data: ndvi.map((r) => r.baseline), borderColor: "#1b2621", borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, tension: 0.25 },
         ],
       },
       options: {
@@ -370,7 +370,7 @@
       type: "bar",
       data: {
         labels: sev.map((c) => c.label),
-        datasets: [{ data: sev.map((c) => c.pct), backgroundColor: LAYER_META.severity.palette, borderRadius: 3 }],
+        datasets: [{ data: sev.map((c) => c.pct), backgroundColor: LAYER_META.severity.palette, borderColor: "#c4cdc9", borderWidth: 1, borderRadius: 3 }],
       },
       options: {
         indexAxis: "y",
@@ -533,7 +533,7 @@
       const sc = CHORO_SCALE[indicator];
       const color = (v) => rampColor(sc.palette, v == null ? null : (v - sc.min) / (sc.max - sc.min));
       choroLayer.clearLayers();
-      choroLayer.options.style = (f) => ({ color: "#0e1412", weight: 1, fillColor: color(f.properties.value), fillOpacity: f.properties.value == null ? 0.25 : 0.85 });
+      choroLayer.options.style = (f) => ({ color: "#ffffff", weight: 1.5, fillColor: color(f.properties.value), fillOpacity: f.properties.value == null ? 0.25 : 0.85 });
       choroLayer.options.onEachFeature = (f, lyr) => {
         lyr.bindTooltip(`<b>${esc(f.properties.name)}</b><br>${fmt(f.properties.value, indicator.startsWith("ndvi") ? 3 : 1)} ${sc.units}`, { sticky: true });
         lyr.on("click", () => { setTarget({ region_id: f.properties.id }, f.properties.name); analyse(); });
